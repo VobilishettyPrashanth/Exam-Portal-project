@@ -1,0 +1,643 @@
+Signin Controller:
+
+package com.csye6220.esdfinalproject.controller;
+
+import com.csye6220.esdfinalproject.model.User;
+import com.csye6220.esdfinalproject.model.UserRole;
+import com.csye6220.esdfinalproject.service.UserService;
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.ModelAndView;
+
+import java.util.Set;
+
+@Controller
+public class SigninController {
+
+
+    @Autowired
+    UserService userService;
+    @GetMapping("/signin")
+    public ModelAndView AuthenticateLoginPage(){
+        return new ModelAndView("signin");
+    }
+
+    @PostMapping("/login-success")
+    public ModelAndView performValidation(@RequestParam String username, @RequestParam String password, HttpServletRequest request){
+
+        ModelAndView modelAndView = new ModelAndView();
+
+        User currentuser = userService.getUserByusername(username);
+        BCryptPasswordEncoder bCryptPasswordEncoder = new BCryptPasswordEncoder();
+
+
+        if(currentuser == null){
+            modelAndView.setViewName("redirect:/signin");
+            modelAndView.addObject("error", "Invalid User name!!!");
+        }
+        else {
+            if (bCryptPasswordEncoder.matches(password, currentuser.getPassword())) {
+                Set<UserRole> roles = currentuser.getUserRoles();
+                System.out.println(roles);
+
+                if (roles != null && (roles.contains(UserRole.ADMIN) || roles.contains(UserRole.STUDENT) || roles.contains(UserRole.INSTRUCTOR))) {
+                    // Redirect to the homepage for all user roles
+                    modelAndView.setViewName("redirect:/homepage");
+                } else {
+                    // Redirect to a default homepage or handle the case where roles are not present
+                    modelAndView.setViewName("redirect:/access_denied");
+                }
+
+                System.out.println(roles);
+                request.getSession().setAttribute("user", currentuser);
+            }
+            else {
+                modelAndView.setViewName("redirect:/signin");
+                modelAndView.addObject("error", "Invalid Password!!!!");
+            }
+        }
+        return modelAndView;
+    }
+}
+
+
+Signout controller:
+
+package com.csye6220.esdfinalproject.controller;
+
+
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+
+@Controller
+public class SignoutController {
+
+    @GetMapping("/signout")
+    public String AuthenticateSignOut(HttpServletRequest request){
+        request.getSession().invalidate();
+        return "redirect:/index";
+    }
+}
+
+Signup controller:
+
+package com.csye6220.esdfinalproject.controller;
+
+
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+
+@Controller
+public class SignoutController {
+
+    @GetMapping("/signout")
+    public String AuthenticateSignOut(HttpServletRequest request){
+        request.getSession().invalidate();
+        return "redirect:/index";
+    }
+}
+
+Question Controller:
+
+package com.csye6220.esdfinalproject.controller;
+
+import com.csye6220.esdfinalproject.model.*;
+import com.csye6220.esdfinalproject.service.CategoryService;
+import com.csye6220.esdfinalproject.service.ExamService;
+import com.csye6220.esdfinalproject.service.QuestionService;
+import com.csye6220.esdfinalproject.service.UserService;
+import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.WebDataBinder;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.ModelAndView;
+
+import java.util.*;
+
+import java.beans.PropertyEditorSupport;
+
+@RestController
+@CrossOrigin("*")
+@RequestMapping("/questions")
+public class QuestionsController {
+
+    @Autowired
+    private CategoryService categoryService;
+
+    @Autowired
+    private QuestionService questionService;
+
+    @Autowired
+    private ExamService examService;
+
+    @Autowired
+    private UserService userService;
+
+    @GetMapping
+    public ModelAndView ViewQuestionsHandler(HttpServletRequest request) {
+        User user = userService.getUserById(((User) request.getSession().getAttribute("user")).getId());
+
+        User userInSession = (User) request.getSession().getAttribute("user");
+
+        try {
+            if (Set.of(UserRole.ADMIN, UserRole.INSTRUCTOR).contains(userInSession.getRole())) {
+            ModelAndView mv = new ModelAndView("questions");
+
+            List<Question> questions = questionService.getAllQuestions();
+
+            mv.addObject("questions", questions);
+
+            return mv;
+        }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        return new ModelAndView("access_denied");
+    }
+    @GetMapping("/create")
+    public ModelAndView CreateQuestionHandler(HttpServletRequest request){
+
+        User userInSession = (User) request.getSession().getAttribute("user");
+
+        try {
+            if (Set.of(UserRole.ADMIN, UserRole.INSTRUCTOR).contains(userInSession.getRole())) {
+                System.out.println("h");
+                Question quesData = new Question();
+                Exam exam = new Exam();
+                System.out.println("e");
+                System.out.println();
+                quesData.setExam(exam);
+
+                List<Exam> exams = examService.getAllExams();
+                ModelAndView mv = new ModelAndView("create_question");
+                mv.addObject("quesData", quesData);
+                mv.addObject("exams",exams);
+                mv.addObject("user", userService.getUserById(userInSession.getId()));
+                return mv;
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        return new ModelAndView("access_denied");
+    }
+    @PostMapping("/create")
+    public ModelAndView QuestionCreation(HttpServletRequest request,
+                                         @ModelAttribute("examData") Question quesData
+    ){
+        System.out.println("Question : "+ quesData.getQuestion());
+        System.out.println("Question Id : " + quesData.getQuestionId());
+        System.out.println("Answer : "+quesData.getAnswer());
+        System.out.println(" Exam Id : "+quesData.getExam().getExamId());
+
+        questionService.addQuestion(quesData);
+        User current_user = userService.getUserById(((User)request.getSession().getAttribute("user")).getId());
+        ModelAndView mv = new ModelAndView("question_success");
+        mv.addObject("message", "Question created successfully!");
+        return mv;
+    }
+
+    @GetMapping("/update/{questionId}")
+    public ModelAndView updateQuestionHandler(HttpServletRequest request, @PathVariable Long questionId) {
+        User userInSession = (User) request.getSession().getAttribute("user");
+
+        try {
+            if (Set.of(UserRole.ADMIN, UserRole.INSTRUCTOR).contains(userInSession.getRole())) {
+                Question quesData = questionService.getQuestionById(questionId);
+                List<Exam> exams = examService.getAllExams();
+
+                questionService.updateQuestion(quesData);
+                ModelAndView mv = new ModelAndView("update_question");
+                mv.addObject("quesData", quesData);
+                mv.addObject("exams", exams);
+                mv.addObject("user", userService.getUserById(userInSession.getId()));
+                return mv;
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+
+        return new ModelAndView("access_denied");
+    }
+
+    @PostMapping("/update")
+    public ModelAndView updateQuestion(HttpServletRequest request,
+                                       @ModelAttribute("quesData") Question updatedQuestion) {
+
+
+        questionService.updateQuestion(updatedQuestion);
+
+        ModelAndView mv = new ModelAndView("question_success");
+        mv.addObject("message", "Question updated successfully!");
+        return mv;
+    }
+
+    @GetMapping("/exam/{examId}")
+    public List<String> getQuestionsOfExam(HttpServletRequest request,
+                                           @PathVariable("examId") Long examId) {
+        List<Question> questions_list = examService.getQuestionsOfExam(examId);
+        List<String> question_content = new ArrayList<>();
+
+        for (Question question : questions_list) {
+
+            String question_1 = question.getQuestion();
+            question_content.add(question_1);
+        }
+        return question_content;
+    }
+   
+    @InitBinder
+    public void initBinder(WebDataBinder binder) {
+        binder.registerCustomEditor(Exam.class, new PropertyEditorSupport() {
+            @Override
+            public void setAsText(String text) {
+                // For converting the String category ID to Category object
+                Exam exam = examService.getExamById(Long.valueOf(text));
+                setValue(exam);
+            }
+        });
+    }
+
+}
+
+Homepage Controller:
+
+package com.csye6220.esdfinalproject.controller;
+
+
+
+import com.csye6220.esdfinalproject.model.User;
+import com.csye6220.esdfinalproject.model.UserRole;
+import com.csye6220.esdfinalproject.service.UserService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.servlet.ModelAndView;
+
+import java.security.Principal;
+
+@Controller
+public class HomePageController {
+
+
+    @Autowired
+    private UserService userService;
+
+    @GetMapping("/")
+    public ModelAndView Indexview(){
+        ModelAndView mv1 = new ModelAndView("index");
+        return mv1;
+    }
+
+    @GetMapping("/homepage")
+    public ModelAndView HomepageHandler(){
+        ModelAndView mv = new ModelAndView("homepage");
+
+        userService.addUser(new User("prashanth", "vobilishetty","Prashanth Prashu", new BCryptPasswordEncoder().encode("prashu123"),"prashanthv@gmail.com",UserRole.STUDENT," Graduate STUDENT","9959931848" ));
+
+        mv.addObject("Student_Count",userService.getUserCount(UserRole.STUDENT));
+        mv.addObject("ADMIN_Count",userService.getUserCount(UserRole.ADMIN));
+        mv.addObject("INSTRUCTOR_Count",userService.getUserCount(UserRole.INSTRUCTOR));
+        mv.addObject("GUEST_Count",userService.getUserCount(UserRole.GUEST));
+        
+        return mv;
+    }
+}
+
+
+Exam Controller:
+
+package com.csye6220.esdfinalproject.controller;
+
+import com.csye6220.esdfinalproject.model.*;
+import com.csye6220.esdfinalproject.service.CategoryService;
+import com.csye6220.esdfinalproject.service.ExamService;
+import com.csye6220.esdfinalproject.service.UserService;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.WebDataBinder;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.ModelAndView;
+
+
+import java.beans.PropertyEditorSupport;
+import java.util.*;
+
+@Controller
+@RequestMapping("/exams")
+@Validated
+public class ExamController {
+    @Autowired
+    private ExamService examService;
+
+    @Autowired
+    private UserService userService;
+
+    @Autowired
+    private CategoryService categoryService;
+
+    @Autowired
+    private HttpServletRequest request;
+
+
+    @GetMapping
+    public ModelAndView viewExamsHandler(HttpServletRequest request) {
+
+        User user = userService.getUserById(((User) request.getSession().getAttribute("user")).getId());
+
+        ModelAndView mv = new ModelAndView("exams");
+
+        List<Exam> examCategories =examService.getAllExams();
+
+        mv.addObject("exams", examCategories);
+
+        return mv;
+    }
+    @GetMapping("/create")
+    public ModelAndView CreatExamHandler(HttpServletRequest request){
+
+        User userInSession = (User) request.getSession().getAttribute("user");
+
+        try {
+            if (Set.of(UserRole.ADMIN, UserRole.INSTRUCTOR).contains(userInSession.getRole())) {
+
+                Exam examData = new Exam();
+                examData.setCategory(new Category());
+                List<Category> categories = categoryService.getAllCategories();
+                ModelAndView mv = new ModelAndView("create_exam");
+                mv.addObject("examData", examData);
+                mv.addObject("categories",categories);
+                mv.addObject("user", userService.getUserById(userInSession.getId()));
+                return mv;
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        return new ModelAndView("access_denied");
+    }
+    //To add Exam Category
+    @PostMapping("/create")
+    public ModelAndView CreateNewExam(HttpServletRequest request,@ModelAttribute("examData") Exam examData)
+    {
+        System.out.println("Title : "+ examData.getTitle());
+        System.out.println("Maximum Marks: " + examData.getMaximumMarks());
+        System.out.println("Description : "+examData.getDescription());
+        System.out.println("Category Id : "+examData.getCategory().getCategoryId());
+        System.out.println("Number of Questions: " + examData.getNumberOfQuestions());
+        System.out.println("Active: " + examData.isActive());
+
+        examService.addExam(examData);
+        User current_user = userService.getUserById(((User)request.getSession().getAttribute("user")).getId());
+
+        ModelAndView mv = new ModelAndView("exam_success");
+        mv.addObject("message", "Exam created successfully!");
+        return mv;
+    }
+
+    @GetMapping("/update/{examId}")
+    public ModelAndView updateExamHandler(HttpServletRequest request, @PathVariable Long examId) {
+
+        User userInSession = (User) request.getSession().getAttribute("user");
+
+        try {
+            if (Set.of(UserRole.ADMIN, UserRole.INSTRUCTOR).contains(userInSession.getRole())) {
+                Exam examData = examService.getExamById(examId);
+                List<Category> categories = categoryService.getAllCategories();
+
+                examService.updateExam(examData);
+                ModelAndView mv = new ModelAndView("update_exam");
+                mv.addObject("examData", examData);
+                mv.addObject("categories", categories);
+                mv.addObject("user", userService.getUserById(userInSession.getId()));
+                return mv;
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+
+        return new ModelAndView("access_denied");
+    }
+
+    @PostMapping("/update")
+    public ModelAndView updateQuestion(HttpServletRequest request,
+                                       @ModelAttribute("examData") Exam updatedExam) {
+
+        examService.updateExam(updatedExam);
+
+        ModelAndView mv = new ModelAndView("exam_success");
+        mv.addObject("message", "Exam updated successfully!");
+        return mv;
+    }
+
+    // To extract single exam
+    @GetMapping("/{examId}")
+    public ModelAndView getQuestionsOfExam(@PathVariable("examId") Long examId){
+
+        User userInSession = (User) request.getSession().getAttribute("user");
+        return new ModelAndView(String.valueOf(this.examService.getExamById(examId)));
+
+    }
+
+    @GetMapping("/take")
+    public  ModelAndView GetAllExams(HttpServletRequest request){
+        User user = userService.getUserById(((User) request.getSession().getAttribute("user")).getId());
+        ModelAndView mv = new ModelAndView("take_exam");
+        List<Exam> available_exams =examService.getAllExams();
+        mv.addObject("exams", available_exams);
+        return mv;
+    }
+
+    @GetMapping("/take/{examId}")
+    public ModelAndView TakeExamHandler(HttpServletRequest request, @PathVariable("examId")Long examId){
+        User userInSession = (User) request.getSession().getAttribute("user");
+        try {
+            if (Set.of(UserRole.ADMIN, UserRole.INSTRUCTOR, UserRole.STUDENT).contains(userInSession.getRole())) {
+               List<Question> questions = examService.getQuestionsOfExam(examId);
+                System.out.println(questions);
+               for(Question q : questions){
+                   System.out.println(q);
+               }
+               ModelAndView mv = new ModelAndView("attempt_exam");
+               mv.addObject("questions",questions);
+               mv.addObject("examId",examId);
+               return mv;
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        return new ModelAndView("access_denied");
+    }
+
+    @PostMapping("{examId}/submitted")
+    public ModelAndView ExamSubmissionHandler(@PathVariable("examId") Long examId, HttpServletRequest request, @ModelAttribute("questions") Question questions
+        ) {
+
+        System.out.println(questions);
+        String[] answers = questions.getGivenAnswer().split(",");
+        System.out.println(Arrays.toString(answers));
+        int score = examService.calculateScore(examId,answers);
+
+        System.out.println(score);
+        ModelAndView mv = new ModelAndView("exam_success");
+        mv.addObject("message", "Exam submitted successfully!");
+        mv.addObject("score",score);
+        return mv;
+    }
+
+
+    @InitBinder
+    public void initBinder(WebDataBinder binder) {
+        binder.registerCustomEditor(Category.class, new PropertyEditorSupport() {
+            @Override
+            public void setAsText(String text) {
+                // Convert the String category ID to Category object
+                Category category = categoryService.getCategoryById(Long.valueOf(text));
+                setValue(category);
+            }
+        });
+    }
+
+}
+
+Category Controller:
+
+package com.csye6220.esdfinalproject.controller;
+
+import com.csye6220.esdfinalproject.model.Category;
+import com.csye6220.esdfinalproject.model.CategoryTypes;
+import com.csye6220.esdfinalproject.model.User;
+import com.csye6220.esdfinalproject.model.UserRole;
+import com.csye6220.esdfinalproject.service.CategoryService;
+import com.csye6220.esdfinalproject.service.UserService;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.ModelAndView;
+
+import java.util.List;
+import java.util.Locale;
+import java.util.Set;
+
+
+@Controller
+@RequestMapping("/categories")
+@Validated
+public class CategoryController {
+
+    @Autowired
+    private CategoryService categoryService;
+
+    @Autowired
+    private UserService userService;
+
+    @GetMapping
+    public ModelAndView viewCategoriesHandler(@RequestParam(required = false) String filter,
+                                              @RequestParam(required = false) String query,
+                                              HttpServletRequest request) {
+        filter = filter == null ? "ALL" : filter.toUpperCase(Locale.ROOT);
+        query = query == null ? "" : query;
+
+        User user = userService.getUserById(((User) request.getSession().getAttribute("user")).getId());
+
+        ModelAndView mv = new ModelAndView("categories");
+
+        List<Category> validCategories =categoryService.getAllCategories();
+
+            mv.addObject("categories", validCategories);
+            mv.addObject("query", query);
+            mv.addObject("filter", filter);
+        return mv;
+        }
+
+        @GetMapping("/create")
+        public ModelAndView CategoryCreationHandler(HttpServletRequest request){
+
+            User userInSession = (User) request.getSession().getAttribute("user");
+
+            try {
+                if (Set.of(UserRole.ADMIN, UserRole.INSTRUCTOR).contains(userInSession.getRole())) {
+                    ModelAndView mv = new ModelAndView("Add_category");
+                    mv.addObject("user", userService.getUserById(userInSession.getId()));
+                    return mv;
+                }
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+            return new ModelAndView("access_denied");
+        }
+
+    //To add Exam Category
+    @PostMapping("/create")
+    public ModelAndView CreateNewCategory(HttpServletRequest request,
+                                          @RequestParam(name = "title") @Size(min = 3, message = "Title must contain at least 3 characters") String title,
+                                          @RequestParam(name = "category_type") @NotNull(message = "Category type cannot be null") String categoryType,
+                                          @RequestParam(name = "description") @NotNull(message = "Description cannot be null") String description
+    ) {
+
+
+        System.out.println("Title : "+title);
+        System.out.println("Category type: " + CategoryTypes.valueOf(categoryType));
+        System.out.println("Description : "+description);
+
+        CategoryTypes current_Type = CategoryTypes.valueOf(categoryType);
+
+        User current_user = userService.getUserById(((User)request.getSession().getAttribute("user")).getId());
+
+        Category category = new Category(title,description,current_Type,current_user);
+
+        categoryService.addCategory(category);
+
+        request.getSession().setAttribute("category",category);
+
+        ModelAndView mv1 = new ModelAndView("category_success");
+        mv1.addObject("category",category);
+       return mv1;
+    }
+
+    @GetMapping("/view/{categoryId}")
+    public ModelAndView ViewCategoryHandler(HttpServletRequest request,
+                                            @PathVariable(name = "categoryId") Long categoryId
+    ){
+        Category category = categoryService.getCategoryById(categoryId);
+
+        ModelAndView mv = new ModelAndView("view_category");
+
+        mv.addObject("category", category);
+        return mv;
+
+    }
+
+    @PostMapping("/{categoryId}/exam/add")
+    public String AddExamToCategory(@PathVariable(name = "categoryId") Long categoryId, HttpServletRequest request){
+
+        User userInSession = (User) request.getSession().getAttribute("user");
+        if (userInSession.getRole() != UserRole.ADMIN) {
+            return "forbidden";
+        }
+        Category category = categoryService.getCategoryById(categoryId);
+
+        request.setAttribute("category", category);
+
+        return "forward:/exam/add";
+    }
+}
+
+
+

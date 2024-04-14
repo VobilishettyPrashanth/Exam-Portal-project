@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta content="width=device-width, initial-scale=1.0" name="viewport">
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <title>Attempt Exam</title>
+
+</head>
+<body>
+<div class="container">
+    <h1>Exam Questions</h1>
+    <form method="post" th:action="@{'/exams/' + ${examId} + '/submitted'}">
+        <input name="examId" th:value="${examId}" type="hidden"/>
+        <div th:each="question: ${questions}">
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h5 class="card-title" th:text="${question.question}"></h5>
+                    <p class="card-title" th:text="${question.option1}">a.</p>
+                    <p class="card-title" th:text="${question.option2}">b.</p>
+                    <p class="card-title" th:text="${question.option3}">c.</p>
+                    <p class="card-title" th:text="${question.option4}">d.</p>
+                    <label class="form-label" for="givenAnswer"> Given Answer :</label>
+                    <input class="form-control w30 m" id="givenAnswer" name="givenAnswer" placeholder="Enter givenAnswer here"
+                           th:value="${question.givenAnswer}" type="text" required="required">
+                </div>
+            </div>
+        </div>
+
+        <button class="btn btn-primary mt-3" type="submit">Submit Exam</button>
+    </form>
+</div>
+</body>
+</html>

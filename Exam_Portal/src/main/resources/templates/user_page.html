@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>student page </title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-rbsA2VBKQhggwzxH7pPCaAqO46MgnOM80zW1RWuH61DGLwZJEdK2Kadq2F9CUG65" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-kenU1KFdBIe4zVF0s0G1M5b4hcpxyD9F7jL+jjXkk+Q2h455rYXK/7HAuoJl+0I4" crossorigin="anonymous"></script>
+</head>
+<body style="background-color: beige">
+<div th:replace="~{/header :: header}"></div>
+<div class="container mt-4">
+    <h1 style="margin-left: 300px; margin-bottom: 100px">STUDENT DASHBOARD</h1>
+
+    <div class="row my-5 text-center">
+        <h2>STUDENT DASHBOARD</h2>
+        <h3 th:if="${User_Name != null}" th:text="${'Welcome, ' + User_Name + '!'}" th:unless="${User_Name == null}">Welcome, Guest!</h3>
+        <h3>STUDENT DETAILS</h3>
+        <h4 th:if="${User_Name != null}" th:text="${'STUDENT NAME: ' + User_Name}" th:unless="${User_Name == null}">STUDENT NAME: Guest</h4>
+    </div>
+</div>
+
+<div class="row my-5 text-center">
+    <h2>Here are our current stats:</h2>
+    <div class="row text-center">
+        <h3 th:text="${'Number of Students Registered: ' + Student_Count}"/>
+    </div>
+<script>
+    // Set the student name dynamically
+    document.getElementById('studentName').innerText = [[${Current_user}]];
+</script>
+</body>
+</html>

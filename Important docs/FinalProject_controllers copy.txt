@@ -1,0 +1,551 @@
+CategoryDAO:
+
+package com.csye6220.esdfinalproject.dao;
+
+
+import com.csye6220.esdfinalproject.model.Category;
+import java.util.List;
+
+
+public interface CategoryDAO {
+
+
+    public void save(Category category);
+
+    public void update(Category category);
+
+    public void delete(Category category);
+
+   public List<Category> getAllCategories();
+
+
+    public Category getCategoryById(Long categoryId);
+}
+
+Category DAO Implementation :
+
+package com.csye6220.esdfinalproject.dao;
+
+import com.csye6220.esdfinalproject.model.Category;
+import com.csye6220.esdfinalproject.util.HibernateUtil;
+import org.hibernate.Session;
+import org.hibernate.SessionFactory;
+import org.hibernate.Transaction;
+import org.hibernate.query.Query;
+import org.springframework.stereotype.Component;
+import java.util.List;
+
+
+@Component
+public class CategoryDAOImpl implements CategoryDAO {
+
+    private SessionFactory sessionFactory = HibernateUtil.buildSessionFactory();
+    @Override
+    public void save(Category category) {
+        try (Session session = sessionFactory.openSession()) {
+            Transaction transaction = session.getTransaction();
+            transaction.begin();
+            session.persist(category);
+            transaction.commit();
+
+        } catch (Exception e) {
+            throw new RuntimeException("Error saving the category to the database: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public void update(Category category) {
+        try (Session session = sessionFactory.openSession()) {
+            Transaction transaction = session.getTransaction();
+            transaction.begin();
+            session.merge(category);
+            transaction.commit();
+        } catch (Exception e) {
+            throw new RuntimeException("Error Updating category in the database: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public void delete(Category category) {
+        if(category == null)
+            return;
+        try (Session session = sessionFactory.openSession()) {
+            Transaction transaction = session.getTransaction();
+            transaction.begin();
+            session.remove(category);
+            transaction.commit();
+        } catch (Exception e) {
+            throw new RuntimeException("Error deleting category in the database: " + e.getMessage(), e);
+        }
+
+    }
+
+    @Override
+    public List<Category> getAllCategories() {
+        try (Session session = sessionFactory.openSession()) {
+            String queryString = "FROM Category ";
+            Query<Category> query = session.createQuery(queryString, Category.class);
+            return query.list();
+        } catch (Exception e) {
+            throw new RuntimeException("No Categories Found in the database: " + e.getMessage(), e);
+        }
+    }
+
+
+    @Override
+    public Category getCategoryById(Long categoryId) {
+        try(Session session = sessionFactory.openSession()) {
+            String queryString = "FROM Category c where c.categoryId  =" + categoryId;
+            Query<Category> query = session.createQuery(queryString, Category.class);
+            List<Category> categories = query.list();
+            return categories.size() == 1 ? categories.get(0) : null;
+        }
+        catch (Exception e){
+            throw new RuntimeException("Category with this Id is Not Found in database: " + e.getMessage(), e);
+        }
+    }
+}
+
+
+Exam DAO:
+
+package com.csye6220.esdfinalproject.dao;
+
+import com.csye6220.esdfinalproject.model.Exam;
+import com.csye6220.esdfinalproject.model.Question;
+
+import java.util.List;
+public interface ExamDAO {
+
+   public void save(Exam exam);
+
+    public void update(Exam exam);
+
+    public void delete(Exam exam);
+
+   public Exam getExamById(Long examId);
+
+//   public void getAllExams(Exam exam);
+
+    public List<Exam> findAllExams();
+    public List<Question> getAllQuestion(Long examId);
+
+}
+
+Exam DAO Implementation :
+
+package com.csye6220.esdfinalproject.dao;
+
+import com.csye6220.esdfinalproject.model.Exam;
+import com.csye6220.esdfinalproject.model.Question;
+import com.csye6220.esdfinalproject.util.HibernateUtil;
+import org.hibernate.Session;
+import org.hibernate.SessionFactory;
+import org.hibernate.Transaction;
+import org.hibernate.query.Query;
+import org.springframework.stereotype.Component;
+import java.util.List;
+
+
+@Component
+public class ExamDAOImpl implements ExamDAO{
+    private SessionFactory sessionFactory = HibernateUtil.buildSessionFactory();
+
+    @Override
+    public void save(Exam exam) {
+        try (Session session = sessionFactory.openSession()) {
+            Transaction transaction = session.getTransaction();
+            transaction.begin();
+            session.persist(exam);
+            transaction.commit();
+        } catch (Exception e) {
+            throw new RuntimeException("Error saving exam to the database: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public void update(Exam exam) {
+        try (Session session = sessionFactory.openSession()) {
+            Transaction transaction = session.getTransaction();
+            transaction.begin();
+            session.merge(exam);
+            transaction.commit();
+        } catch (Exception e) {
+            throw new RuntimeException("Error Updating exam to the database: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public void delete(Exam exam) {
+        if(exam == null)
+            return;
+        try (Session session = sessionFactory.openSession()) {
+            Transaction transaction = session.getTransaction();
+            transaction.begin();
+            session.remove(exam);
+            transaction.commit();
+        } catch (Exception e) {
+            throw new RuntimeException("Error deleting exam from database: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public Exam getExamById(Long examId) {
+        try(Session session = sessionFactory.openSession()) {
+            String queryString = "FROM Exam e where e.examId =" + examId ;
+            Query<Exam> query = session.createQuery(queryString, Exam.class);
+            List<Exam> exams = query.list();
+            return exams.size() == 1 ? exams.get(0) : null;
+        }
+        catch (Exception e){
+            throw new RuntimeException("Exam with this Id Not Found in database: " + e.getMessage(), e);
+        }
+    }
+
+
+    @Override
+    public List<Exam> findAllExams() {
+        try (Session session = sessionFactory.openSession()) {
+            String queryString = "SELECT e FROM Exam e";
+            Query<Exam> query = session.createQuery(queryString, Exam.class);
+            return query.list();
+        } catch (Exception e) {
+            throw new RuntimeException("No Exams Found in the database: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public List<Question> getAllQuestion(Long examId) {
+        try (Session session = sessionFactory.openSession()) {
+            String queryString = "FROM Question q where q.exam.id="+examId;
+            Query<Question> query = session.createQuery(queryString, Question.class);
+            return query.list();
+        } catch (Exception e) {
+            throw new RuntimeException("No Exams Found in the database: " + e.getMessage(), e);
+        }
+    }
+}
+
+QuestionDAO:
+
+package com.csye6220.esdfinalproject.dao;
+
+import com.csye6220.esdfinalproject.model.Exam;
+import com.csye6220.esdfinalproject.model.Question;
+
+import javax.swing.plaf.PanelUI;
+import java.util.List;
+import java.util.Set;
+
+public interface QuestionsDAO {
+
+   public void save(Question question);
+
+    public void update(Question question);
+
+    public void delete(Question question);
+
+    public Question getQuestionById(Long questionId);
+
+    public List<Question> getQuestionsByExam(Exam exam);
+
+   public List<Question> getAllQuestions();
+
+   public List<Question> findQuestionsByExam(Exam exam);
+
+
+}
+
+Question DAO Implementation :
+
+package com.csye6220.esdfinalproject.dao;
+
+
+import com.csye6220.esdfinalproject.model.Exam;
+import com.csye6220.esdfinalproject.model.Question;
+import com.csye6220.esdfinalproject.util.HibernateUtil;
+import org.hibernate.Session;
+import org.hibernate.SessionFactory;
+import org.hibernate.Transaction;
+import org.hibernate.query.Query;
+import org.springframework.stereotype.Component;
+import java.util.List;
+
+@Component
+public class QuestionDAOImpl implements QuestionsDAO{
+
+    private SessionFactory sessionFactory = HibernateUtil.buildSessionFactory();
+
+    @Override
+    public void save(Question question) {
+        try (Session session = sessionFactory.openSession()) {
+            Transaction transaction = session.getTransaction();
+            transaction.begin();
+            session.persist(question);
+            transaction.commit();
+
+        } catch (Exception e) {
+            throw new RuntimeException("Error saving the question to the database: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public void update(Question question) {
+        try (Session session = sessionFactory.openSession()) {
+            Transaction transaction = session.getTransaction();
+            transaction.begin();
+            session.merge(question);
+            transaction.commit();
+        } catch (Exception e) {
+            throw new RuntimeException("Error Updating question in the database: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public Question getQuestionById(Long questionId) {
+        try(Session session = sessionFactory.openSession()) {
+            String queryString = "FROM Question q where q.questionId =" + questionId;
+            Query<Question> query = session.createQuery(queryString, Question.class);
+            List<Question> questions = query.list();
+            return questions.size() == 1 ? questions.get(0) : null;
+        }
+        catch (Exception e){
+            throw new RuntimeException("Category with this Question Id is Not Found in database: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public List<Question> getQuestionsByExam(Exam exam) {
+        try (Session session = sessionFactory.openSession()) {
+            String queryString = "SELECT q FROM Question q WHERE q.exam = :exam";
+            Query<Question> query = session.createQuery(queryString, Question.class);
+            query.setParameter("exam", exam);
+            return query.list();
+        } catch (Exception e) {
+            throw new RuntimeException("Error fetching questions by exam: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public List<Question> getAllQuestions() {
+        try (Session session = sessionFactory.openSession()) {
+            String queryString = "FROM Question ";
+            Query<Question> query = session.createQuery(queryString, Question.class);
+            return query.list();
+        } catch (Exception e) {
+            throw new RuntimeException("No Questions Found in the database: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public List<Question> findQuestionsByExam(Exam exam) {
+        try (Session session = sessionFactory.openSession()) {
+            String queryString = "SELECT COUNT(*) FROM Question q WHERE q.exam = :exam";
+            Query<Question> query = session.createQuery(queryString, Question.class);
+            return query.list();
+        } catch (Exception e) {
+            throw new RuntimeException("No Questions Found in the database: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public void delete(Question question) {
+
+        if(question == null)
+            return;
+        try (Session session = sessionFactory.openSession()) {
+            Transaction transaction = session.getTransaction();
+            transaction.begin();
+            session.remove(question);
+            transaction.commit();
+        } catch (Exception e) {
+            throw new RuntimeException("Error deleting the question from database: " + e.getMessage(), e);
+        }
+    }
+}
+
+User DAO :
+
+package com.csye6220.esdfinalproject.dao;
+
+import com.csye6220.esdfinalproject.model.User;
+import com.csye6220.esdfinalproject.model.UserRole;
+
+import java.util.List;
+
+public interface UserDAO {
+
+    public User findByUsername(String username);
+
+    public Long getUserCountByRole(UserRole role);
+
+    public void save(User user);
+
+    public void update(User user);
+
+    public void delete(User user);
+
+    public void deleteById(Long id);
+
+    public void deleteByEmail(String email);
+
+    public User getById(Long id);
+
+    public User getByEmail(String username);
+
+    public List<User> getAllUsers();
+}
+
+User DAO Implementation :
+
+package com.csye6220.esdfinalproject.dao;
+
+import com.csye6220.esdfinalproject.model.User;
+import com.csye6220.esdfinalproject.model.UserRole;
+import com.csye6220.esdfinalproject.util.HibernateUtil;
+import org.hibernate.Session;
+import org.hibernate.SessionFactory;
+import org.hibernate.Transaction;
+import org.hibernate.query.Query;
+import org.springframework.stereotype.Component;
+import java.util.List;
+
+
+@Component
+public class UserDAOImpl implements UserDAO{
+
+    private SessionFactory sessionFactory = HibernateUtil.buildSessionFactory();
+
+    @Override
+    public User findByUsername(String username) {
+        try (Session session = sessionFactory.openSession()) {
+            String string = "FROM User u where u.username=\"" + username + "\"";
+            Query query = session.createQuery(string, User.class);
+            List<User> users = query.list();
+            return users.size() == 1 ? users.get(0) : null;
+        } catch (Exception e) {
+            throw new RuntimeException("Error finding user with this username: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public Long getUserCountByRole(UserRole role) {
+
+        try (Session session = sessionFactory.openSession()) {
+            String hql = "SELECT COUNT(*) FROM User u WHERE u.role = :role";
+            Query<Long> query = session.createQuery(hql, Long.class);
+            query.setParameter("role", role);
+            return query.uniqueResult();
+        } catch (Exception e) {
+            throw new RuntimeException("Error getting user count by role: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public void save(User user) {
+        try (Session session = sessionFactory.openSession()) {
+            Transaction transaction = session.getTransaction();
+            transaction.begin();
+            session.persist(user);
+            transaction.commit();
+        } catch (Exception e) {
+            throw new RuntimeException("Error saving the user to the database: " + e.getMessage(), e);
+        }
+    }
+    public void update(User user) {
+        try (Session session = sessionFactory.openSession()) {
+            Transaction transaction = session.getTransaction();
+            transaction.begin();
+            session.merge(user);
+            transaction.commit();
+        } catch (Exception e) {
+            throw new RuntimeException("Error Updating the user in the database: " + e.getMessage(), e);
+        }
+
+    }
+
+    @Override
+    public void delete(User user) {
+        if(user == null)
+            return;
+        try (Session session = sessionFactory.openSession()) {
+            Transaction transaction = session.getTransaction();
+            transaction.begin();
+            session.remove(user);
+            transaction.commit();
+        } catch (Exception e) {
+            throw new RuntimeException("Error deleting this user in database: " + e.getMessage(), e);
+        }
+
+
+    }
+
+    @Override
+    public void deleteById(Long id) {
+        try (Session session = sessionFactory.openSession()) {
+            User user = session.get(User.class, id);
+            if (user != null) {
+                session.beginTransaction();
+                session.remove(user);
+                session.getTransaction().commit();
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Error deleting user with this id: " + e.getMessage(), e);
+        }
+
+    }
+
+    @Override
+    public void deleteByEmail(String email) {
+        try (Session session = sessionFactory.openSession()) {
+            User user = session.get(User.class, email);
+            if (user != null) {
+                session.beginTransaction();
+                session.remove(user);
+                session.getTransaction().commit();
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Error deleting user with this Email: " + e.getMessage(), e);
+        }
+    }
+
+
+    @Override
+    public User getById(Long id) {
+        try(Session session = sessionFactory.openSession()) {
+            String queryString = "FROM User u where u.id="+id  ;
+            Query<User> query = session.createQuery(queryString, User.class);
+            List<User> users = query.list();
+            return users.size() == 1 ? users.get(0) : null;
+        }
+        catch (Exception e){
+            throw new RuntimeException("User with this is Not Found in database: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public User getByEmail(String email) {
+        try(Session session = sessionFactory.openSession()) {
+            String queryString = "FROM User u where u.email=\"" + email + "\"";
+            Query<User> query = session.createQuery(queryString, User.class);
+            List<User> users = query.list();
+            return users.size() == 1 ? users.get(0) : null;
+        }
+        catch (Exception e){
+            throw new RuntimeException("User with email id Not Found in database: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public List<User> getAllUsers() {
+        try (Session session = sessionFactory.openSession()) {
+            String queryString = "FROM User ";
+            Query<User> query = session.createQuery(queryString, User.class);
+            return query.list();
+        } catch (Exception e) {
+            throw new RuntimeException("No User Found in the database: " + e.getMessage(), e);
+        }
+    }
+}
+
+
